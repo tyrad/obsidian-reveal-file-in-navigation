@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-reveal-file-location",
-	"name": "Reveal File Location Plugin",
+	"id": "obsidian-reveal-file-in-navigation",
+	"name": "Reveal File In Navigation Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
+	"description": "Reveal File In Navigation Plugin.",
 	"author": "mistj",
 	"authorUrl": "https://github.com/tyrad/obsidian-reveal-file-button",
 	"isDesktopOnly": false
