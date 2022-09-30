@@ -1,137 +1,104 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+	WorkspaceLeaf,
+	Notice,
+	Plugin,
+	TFolder
+} from 'obsidian';
+import {FileExplorerItem} from "./interface";
 
-// Remember to rename these classes and interfaces!
+const REVEAL_FILE_ICON =
+	'<svg t="1664520498493" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1866" data-spm-anchor-id="a313x.7781069.0.i5" width="200" height="200"><path fill="currentColor" stroke="currentColor" d="M512.000512 65.300238c-246.715031 0-446.674179 200.01236-446.674179 446.729437 0 246.716055 199.959148 446.671109 446.674179 446.671109 246.716055 0 446.672132-199.956078 446.672132-446.672132C958.672644 265.311575 758.716566 65.300238 512.000512 65.300238zM553.880341 900.627135 553.880341 749.337453l-55.837726 0 0 153.273872c-195.056488-6.880711-354.169345-157.369144-374.642632-348.705913l151.264099 0 0-55.837726L121.414769 498.067686c7.211239-204.479091 172.175361-369.46675 376.626823-376.679012l0 153.330154 55.837726 0L553.879318 123.372865c191.335746 20.478404 341.823156 179.613774 348.703867 374.694821L749.311359 498.067686l0 55.837726 151.289682 0C881.109104 736.025263 736.000192 881.135198 553.880341 900.627135z" p-id="1867"></path></svg>';
 
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+const REVEL_BUTTON_CLASS = 'x-reveal-file-button';
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+	private get leaves(): WorkspaceLeaf[] {
+		return this.app.workspace.getLeavesOfType('file-explorer');
+	}
+
+	private getRevealButton(leaf: WorkspaceLeaf): NodeListOf<HTMLDivElement> {
+		return leaf.view.containerEl.querySelectorAll(
+			`.${REVEL_BUTTON_CLASS}`
+		);
+	}
+
+	/**
+	 * refer to : https://github.com/OfficerHalf/obsidian-collapse-all
+	 * Ensures given explorer item is a folder and not the root or a note
+	 */
+	private explorerItemIsFolder(item: FileExplorerItem): boolean {
+		return (
+			item.file instanceof TFolder &&
+			item.file.path !== '/' &&
+			item.collapsed !== undefined
+		);
+	}
 
 	async onload() {
-		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+		const showFileLocation = () => {
+			const activeFile = this.app.workspace.getActiveFile();
+			if (!activeFile) {
+				new Notice("No active file");
+				return;
 			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
+			const relativePath = activeFile.path;
+			this.leaves.forEach((leaf) => {
+				// get all file aside
+				const items = Object.values((leaf.view as any).fileItems) as FileExplorerItem[];
+				items.forEach((item) => {
+					// expand folder
+					if (item && this.explorerItemIsFolder(item) && item.collapsed !== false && relativePath.includes(item.file.path)) {
+						console.log('item path:', item.file.path)
+						item.setCollapsed && item.setCollapsed(false);
 					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+				});
+			})
+			let targetElement = document.querySelector(`div[data-path="${relativePath}"]`);
+			if (targetElement) {
+				targetElement.scrollIntoView();
 			}
+		}
+
+		this.app.workspace.onLayoutReady(() => {
+			this.leaves.forEach((leaf) => {
+				const container = leaf.view.containerEl as HTMLDivElement;
+				const navContainer = container.querySelector('div.nav-buttons-container');
+				if (!navContainer) {
+					return null;
+				}
+				// check button existed
+				const existingButton = this.getRevealButton(leaf)[0]
+				if (existingButton) {
+					return;
+				}
+				const button = document.createElement('div');
+				button.innerHTML = REVEAL_FILE_ICON;
+				button.setAttribute(
+					'aria-label',
+					'Show opened file'
+				);
+				button.className = `nav-action-button ${REVEL_BUTTON_CLASS}`;
+				navContainer.appendChild(button);
+				this.registerDomEvent(button, 'click', showFileLocation);
+			})
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+		// add command
+		this.addCommand({
+			id: 'reveal file in navigation',
+			name: 'Reveal file in navigation',
+			callback: showFileLocation
 		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+		// remove added buttons
+		this.leaves.forEach((leaf) => {
+			const revealButton = this.getRevealButton(leaf);
+			revealButton.forEach(button => {
+				button.remove();
+			})
+		})
 	}
 }
