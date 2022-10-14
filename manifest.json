@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-reveal-file-in-navigation",
 	"name": "Reveal File In Navigation Plugin",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Reveal File In Navigation Plugin.",
 	"author": "mistj",
