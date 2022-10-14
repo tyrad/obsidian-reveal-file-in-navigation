@@ -6,6 +6,9 @@ obsidian自带的"在文件列表中显示当前文件"按钮有些隐蔽。 这
 ![](./doc/demo.gif)
 
 
+# license
+
+MIT
 
 
 
