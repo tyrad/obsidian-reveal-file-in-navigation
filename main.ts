@@ -49,7 +49,6 @@ export default class MyPlugin extends Plugin {
 				items.forEach((item) => {
 					// expand folder
 					if (item && this.explorerItemIsFolder(item) && item.collapsed !== false && relativePath.includes(item.file.path)) {
-						console.log('item path:', item.file.path)
 						item.setCollapsed && item.setCollapsed(false);
 					}
 				});
